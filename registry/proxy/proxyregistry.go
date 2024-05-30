@@ -3,10 +3,15 @@ package proxy
 import (
 	"context"
 	"fmt"
+	"log"
+	"net"
 	"net/http"
 	"net/url"
 	"sync"
+	"syscall"
 	"time"
+
+	"github.com/c-robinson/iplib"
 
 	"github.com/distribution/reference"
 
@@ -32,6 +37,8 @@ type proxyingRegistry struct {
 	remoteURL      url.URL
 	authChallenger authChallenger
 	basicAuth      auth.CredentialStore
+	subnet         iplib.Net6
+	closeInterval  time.Duration
 }
 
 // NewRegistryPullThroughCache creates a registry acting as a pull through cache
@@ -129,7 +136,9 @@ func NewRegistryPullThroughCache(ctx context.Context, registry distribution.Name
 			cm:        challenge.NewSimpleManager(),
 			cs:        cs,
 		},
-		basicAuth: b,
+		basicAuth:     b,
+		subnet:        iplib.NewNet6(net.ParseIP(config.Subnet), config.SubnetMaskLength, 0),
+		closeInterval: config.CloseInterval,
 	}, nil
 }
 
@@ -144,8 +153,43 @@ func (pr *proxyingRegistry) Repositories(ctx context.Context, repos []string, la
 func (pr *proxyingRegistry) Repository(ctx context.Context, name reference.Named) (distribution.Repository, error) {
 	c := pr.authChallenger
 
+	trans := http.DefaultTransport.(*http.Transport).Clone()
+	go func() {
+		t := time.NewTicker(pr.closeInterval)
+		for range t.C {
+			log.Println("huecker: CloseIdleConnections")
+			trans.CloseIdleConnections()
+		}
+	}()
+
+	trans.DialContext = func(ctx context.Context, network, addr string) (net.Conn, error) {
+		newAddr := pr.subnet.RandomIP()
+		log.Println("huecker: Random IP", newAddr.String())
+
+		dialer := &net.Dialer{
+			Control: func(network, address string, c syscall.RawConn) error {
+				var operr error
+				if err := c.Control(func(fd uintptr) {
+					operr = syscall.SetsockoptInt(int(fd), syscall.SOL_IP, syscall.IP_FREEBIND, 1)
+				}); err != nil {
+					return err
+				}
+				return operr
+			},
+			LocalAddr: &net.TCPAddr{
+				IP: newAddr,
+			},
+		}
+
+		conn, err := dialer.DialContext(ctx, network, addr)
+		if err != nil {
+			log.Println("huecker: DialContext error", err)
+		}
+		return conn, err
+	}
+
 	tkopts := auth.TokenHandlerOptions{
-		Transport:   http.DefaultTransport,
+		Transport:   trans,
 		Credentials: c.credentialStore(),
 		Scopes: []auth.Scope{
 			auth.RepositoryScope{
@@ -156,7 +200,7 @@ func (pr *proxyingRegistry) Repository(ctx context.Context, name reference.Named
 		Logger: dcontext.GetLogger(ctx),
 	}
 
-	tr := transport.NewTransport(http.DefaultTransport,
+	tr := transport.NewTransport(trans,
 		auth.NewAuthorizer(c.challengeManager(),
 			auth.NewTokenHandlerWithOptions(tkopts),
 			auth.NewBasicHandler(pr.basicAuth)))

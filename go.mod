@@ -41,6 +41,8 @@ require (
 	gopkg.in/yaml.v2 v2.4.0
 )
 
+require github.com/c-robinson/iplib v1.0.8
+
 require (
 	cloud.google.com/go v0.110.7 // indirect
 	cloud.google.com/go/compute v1.23.0 // indirect

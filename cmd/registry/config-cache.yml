@@ -52,6 +52,9 @@ proxy:
   remoteurl: https://registry-1.docker.io
   username: username
   password: password
+  subnet: fe80::
+  subnetmasklength: 64
+  closeinterval: 1m
 health:
   storagedriver:
     enabled: true

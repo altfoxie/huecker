@@ -640,6 +640,15 @@ type Proxy struct {
 	// if not set, defaults to 7 * 24 hours
 	// If set to zero, will never expire cache
 	TTL *time.Duration `yaml:"ttl,omitempty"`
+
+	// Subnet to select random IP address from
+	Subnet string `yaml:"subnet,omitempty"`
+
+	// SubnetMaskLength is the length of the subnet mask
+	SubnetMaskLength int `yaml:"subnetmasklength,omitempty"`
+
+	// CloseInterval is the interval to close idle connections
+	CloseInterval time.Duration `yaml:"closeinterval,omitempty"`
 }
 
 type Validation struct {
