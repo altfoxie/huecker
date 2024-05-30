@@ -1,4 +1,4 @@
-# Форк Docker Registry (Distribution) для [huecker.io](https://huecker.io).
+# Форк Docker Registry (Distribution) для [huecker.io](https://huecker.io)
 
 В конфиг добавлены параметры `subnet`, `subnetmasklength`, `closeinterval`:
 
