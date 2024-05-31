@@ -1,3 +1,6 @@
+<img src="./logo_light.svg#gh-light-mode-only" alt="logo" width="200" />
+<img src="./logo_dark.svg#gh-dark-mode-only" alt="logo" width="200" />
+
 # Форк Docker Registry (Distribution) для [huecker.io](https://huecker.io)
 
 В конфиг добавлены параметры `subnet`, `subnetmasklength`, `closeinterval`:
