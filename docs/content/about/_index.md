@@ -70,4 +70,4 @@ golang are certainly useful as well for advanced operations or hacking.
 
 ## Next
 
-Dive into [deploying your registry](deploying)
+Dive into [deploying your registry](deploying.md)
